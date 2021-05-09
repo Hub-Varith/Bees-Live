@@ -18,6 +18,11 @@ int BUZZERPIN = 18;
 bool fan0Stat;
 bool fan1Stat;
 
+int fanPower0;
+int fanPower1;
+
+float humidity;
+float temperature;
 
 //Define constants for AM2301
 #define DHTTYPE DHT21 // AM2301
@@ -43,8 +48,8 @@ const int resolution = 8;
 const int sensor = 34;
 
 //Fan power
-float fanPowerL;
-float fanPowerR;
+double fanPowerL;
+double fanPowerR;
 
 HTTPClient client;
 
@@ -133,11 +138,11 @@ void toggleBuzz(String condition)
   }
 }
 
-void runFan(int fanPower0, int fanPower1)
+void runFan()
 {
+
   //There will be left and right fans 0 = left, 1 = right
-  fanPowerL = fanPower0 / 255;
-  fanPowerR = fanPower1 / 255;
+  
 
   if (fan0Stat == true)
   {
@@ -147,18 +152,41 @@ void runFan(int fanPower0, int fanPower1)
     digitalWrite(IN1B, HIGH);
     //Setting the motor speed
     ledcWrite(ledChannel, fanPower0);
-  } else if (fan0Stat == false) {
+  }
+  else if (fan0Stat == false)
+  {
     digitalWrite(IN1A, LOW);
     digitalWrite(IN1B, LOW);
   }
-  
+
   if (fan1Stat == true)
   {
     Serial.println("Running fan 1");
     digitalWrite(IN2A, LOW);
     digitalWrite(IN2B, HIGH);
     ledcWrite(ledChannel, fanPower1);
-  } else if (fan1Stat == false) {
+  }
+  else if (fan1Stat == false)
+  {
+    digitalWrite(IN2A, LOW);
+    digitalWrite(IN2B, LOW);
+  }
+
+  if (fan0Stat && fan1Stat == true)
+  {
+    Serial.println("Running both fans");
+    digitalWrite(IN1A, LOW);
+    digitalWrite(IN1B, HIGH);
+    ledcWrite(ledChannel, fanPower0);
+    digitalWrite(IN2A, LOW);
+    digitalWrite(IN2B, HIGH);
+    ledcWrite(ledChannel, fanPower1);
+  }
+  else if (fan0Stat and fan1Stat == false)
+  {
+    Serial.println("Stopping both fans");
+    digitalWrite(IN1A, LOW);
+    digitalWrite(IN1B, LOW);
     digitalWrite(IN2A, LOW);
     digitalWrite(IN2B, LOW);
   }
@@ -191,7 +219,8 @@ void postSensorData(float temperature, float humidity, String fanSpeedL, String 
   //Json object structure
   doc["temperature"] = temperature;
   doc["humidity"] = humidity;
-  doc["fanSpeed"] = fanSpeedL;
+  doc["fan1Speed"] = fanSpeedL;
+  doc["fan2Speed"] = fanSpeedR;
   doc["userId"] = "esp";
   doc["sensorId"] = "AM2301";
 
@@ -221,7 +250,41 @@ void sendSensorData()
   }
   else
   {
+    temperature = t;
+    humidity = h;
+    if (t >= 95)
+    {
+      fanPower0 = 255;
+      fanPower1 = 255;
+      // fanPowerL = fanPower0 / 255;
+      // fanPowerR = fanPower1 / 255;
+    }
+    else if (t > 80)
+    {
+      fanPower0 = 230;
+      fanPower1 = 230;
+      // fanPowerL = fanPower0 / 255;
+      // fanPowerR = fanPower1 / 255;
+    }
+    else if (t > 70)
+    {
+      fanPower0 = 210;
+      fanPower1 = 210;
+      // fanPowerL = fanPower0 / 255;
+      // fanPowerR = fanPower1 / 255;
+    }
+    else if (t < 65)
+    {
+      digitalWrite(IN1A, LOW);
+      digitalWrite(IN1B, LOW);
+      digitalWrite(IN2A, LOW);
+      digitalWrite(IN2B, LOW);
+    }
+    fanPowerL = (fanPower0/ 255.0) * 100.0;
+    fanPowerR = (fanPower1/ 255.0) * 100.0;
     postSensorData(t, h, String(fanPowerL), String(fanPowerR));
+    Serial.println(fanPowerL);
+    Serial.println(fanPowerR);
     Serial.print("Humidity: ");
     Serial.print(h);
     Serial.print(" %\t");
@@ -245,8 +308,8 @@ void getFanData()
 
   DynamicJsonDocument doc(2048);
   deserializeJson(doc, realPayload);
-   fan0Stat = doc["isFan1Active"];
-   fan1Stat = doc["isFan2Active"];
+  fan0Stat = doc["isFan1Active"];
+  fan1Stat = doc["isFan2Active"];
 
   // if (fan0Stat == true)
   // {
@@ -313,5 +376,5 @@ void loop()
 {
   getFanData();
   sendSensorData();
-  runFan(255, 255);
+  runFan();
 }
