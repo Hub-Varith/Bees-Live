@@ -8,11 +8,16 @@
 const char *ssid = "InfiniteX Office";
 const char *password = "6msme99qas";
 String serverName = "https://us-central1-beeslive-17ec1.cloudfunctions.net/webApi/sensor_data/new";
+String fanStatusServer = "https://us-central1-beeslive-17ec1.cloudfunctions.net/webApi/fan_status/abc123";
 String jsonOutput;
 
 // #define DHTTYPE DHT21
 //Buzzer pin
 int BUZZERPIN = 18;
+
+bool fan0Stat;
+bool fan1Stat;
+
 
 //Define constants for AM2301
 #define DHTTYPE DHT21 // AM2301
@@ -43,7 +48,8 @@ float fanPowerR;
 
 HTTPClient client;
 
-void postDummyData() {
+void postDummyData()
+{
   HTTPClient client;
   client.begin(serverName);
   client.addHeader("Content-Type", "application/json");
@@ -60,7 +66,7 @@ void postDummyData() {
   obj["sensorId"] = "AM2301";
 
   //Posting the data to the server
-  
+
   serializeJson(doc, jsonOutput);
   client.POST(jsonOutput);
   client.end();
@@ -127,25 +133,48 @@ void toggleBuzz(String condition)
   }
 }
 
-void runFan(int fan, int fanPower0, int fanPower1)
+void runFan(int fanPower0, int fanPower1)
 {
   //There will be left and right fans 0 = left, 1 = right
-  fanPowerL = fanPower0/255;
-  fanPowerR = fanPower1/255;
+  fanPowerL = fanPower0 / 255;
+  fanPowerR = fanPower1 / 255;
 
-  if (fan == 0)
+  if (fan0Stat == true)
   {
+    Serial.println("Running fan 0");
     //Move the left motor
     digitalWrite(IN1A, LOW);
     digitalWrite(IN1B, HIGH);
     //Setting the motor speed
     ledcWrite(ledChannel, fanPower0);
+  } else if (fan0Stat == false) {
+    digitalWrite(IN1A, LOW);
+    digitalWrite(IN1B, LOW);
   }
-  if (fan == 1)
+  
+  if (fan1Stat == true)
   {
+    Serial.println("Running fan 1");
     digitalWrite(IN2A, LOW);
     digitalWrite(IN2B, HIGH);
     ledcWrite(ledChannel, fanPower1);
+  } else if (fan1Stat == false) {
+    digitalWrite(IN2A, LOW);
+    digitalWrite(IN2B, LOW);
+  }
+}
+
+void stopFan()
+{
+  if (fan0Stat == false)
+  {
+    digitalWrite(IN1A, LOW);
+    digitalWrite(IN1B, LOW);
+  }
+  else if (fan1Stat == false)
+  {
+    digitalWrite(IN1B, LOW);
+    digitalWrite(IN2B, LOW);
   }
 }
 
@@ -167,14 +196,12 @@ void postSensorData(float temperature, float humidity, String fanSpeedL, String 
   doc["sensorId"] = "AM2301";
 
   //Posting the data to the server
-  
+
   serializeJson(doc, jsonOutput);
   client.POST(jsonOutput);
   client.end();
   Serial.println(jsonOutput);
   jsonOutput = "";
-  
-
 
   // int httpCode = client.POST();
 }
@@ -201,15 +228,90 @@ void sendSensorData()
     Serial.print("Temperature: ");
     Serial.print(t);
     Serial.println(" *F");
-    delay(2000);
+    // delay(2000);
   }
+}
+
+void getFanData()
+{
+  HTTPClient client;
+  // client.useHTTP10(true);
+  client.begin(fanStatusServer);
+  client.GET();
+
+  String payload = client.getString();
+  String realPayload = payload.substring(9, 71);
+  // Serial.println(realPayload);
+
+  DynamicJsonDocument doc(2048);
+  deserializeJson(doc, realPayload);
+   fan0Stat = doc["isFan1Active"];
+   fan1Stat = doc["isFan2Active"];
+
+  // if (fan0Stat == true)
+  // {
+  //   runFan(0, 255, 0);
+  //   Serial.println("Run L fan");
+  // }
+  // else
+  // {
+  //   stopFan(0);
+  // }
+
+  // if (fan1Stat == true)
+  // {
+  //   runFan(1, 0, 255);
+  // }
+  // else
+  // {
+  //   stopFan(1);
+  // }
+
+  // if (httpCode > 0)
+  // {
+  //   String payload = client.getString();
+  //   const int CAPACITY = JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(4);
+  //   DynamicJsonDocument doc(1024);
+  //   deserializeJson(doc, payload);
+  //   String thing = doc["sensorId"];
+
+  //   // if (err)
+  //   // {
+  //   //   Serial.print(F("deserializeJson() failed with code "));
+  //   //   Serial.println(err.c_str());
+  //   // }
+
+  //   Serial.println(thing);
+
+  //   // char json[500];
+  //   // payload.replace("data:", "");
+  //   // payload.replace(" ", "");
+  //   // payload.replace("\n", "");
+  //   // payload.trim();
+  //   // payload.remove(0, 1);
+  //   // payload.toCharArray(json, 500);
+  //   // // Serial.println(payload);
+
+  //   // // const int CAP = JSON_OBJECT_SIZE(4);
+  //   // StaticJsonDocument<200> doc;
+  //   // DeserializationError err = deserializeJson(doc, payload);
+  //   // String isFan1Active = doc["sensorId"];
+  //   // Serial.println(isFan1Active);
+
+  //   // if (err)
+  //   // {
+  //   //   Serial.print(F("deserializeJson() failed with code "));
+  //   //   Serial.println(err.c_str());
+  //   // }
+
+  //   // Serial.println(payload);
+  //   // // Serial.println(isFan2Active);
+  // }
 }
 
 void loop()
 {
+  getFanData();
   sendSensorData();
-  // postDummyData();
-  // delay(2000);
-  // Serial.println("sent");
-
+  runFan(255, 255);
 }
