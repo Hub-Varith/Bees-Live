@@ -256,6 +256,7 @@ void sendSensorData()
     {
       fanPower0 = 255;
       fanPower1 = 255;
+      toggleBuzz("on");
       // fanPowerL = fanPower0 / 255;
       // fanPowerR = fanPower1 / 255;
     }
