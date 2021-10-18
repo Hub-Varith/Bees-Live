@@ -2,6 +2,8 @@
 Beehives with automatic ventilation and temperature regulation system (Hardware)
 Demo: https://devpost.com/software/bees-live
 
+![image](https://user-images.githubusercontent.com/60389547/137722714-7cb27990-70a1-4774-b3fa-37934b41f942.png)
+
 ## Inspiration
 Our group is interested in sustainability. We chose to focus on Bees because are essential for the ecosystem as they contribute with pollinating plants to increase plant growth that other animals depend on as a food source. Honey bees are responsible for pollinating 80% of the plants worldwide. However, unfortunately, due to change in climate, bees are drastically decreasing. Our team will help with ventilating the beehive thereby reducing one of their tasks. Usually, bees flap their wings at the bottom of the beehive to generate air flow in the beehive. Our system will help bees focus on other tasks such as reproduction to increase their population despite drastic changes in temperature due to climate change.
 
